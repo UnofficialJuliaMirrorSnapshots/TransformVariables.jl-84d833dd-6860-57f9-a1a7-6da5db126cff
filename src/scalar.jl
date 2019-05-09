@@ -26,8 +26,9 @@ inverse_eltype(t::ScalarTransform, y::T) where {T <: Real} = float(T)
 
 random_arg(t::ScalarTransform; kwargs...) = random_real(; kwargs...)
 
-
-# identity
+####
+#### identity
+####
 
 """
 $(TYPEDEF)
@@ -42,8 +43,9 @@ transform_and_logjac(::Identity, x::Real) = x, zero(x)
 
 inverse(::Identity, x::Real) = x
 
-
-# shifted exponential
+####
+#### shifted exponential
+####
 
 """
 $(TYPEDEF)
@@ -77,8 +79,9 @@ function inverse(t::ShiftedExp{D}, x::Real) where D
     end
 end
 
-
-# scaled and shifted logistic
+####
+#### scaled and shifted logistic
+####
 
 """
 $(TYPEDEF)
@@ -110,17 +113,22 @@ transform_and_logjac(t::ScaledShiftedLogistic, x) =
     transform(t, x), log(t.scale) + logistic_logjac(x)
 
 function inverse(t::ScaledShiftedLogistic, y)
+    @argcheck y > t.shift           DomainError
+    @argcheck y < t.scale + t.shift DomainError
     logit((y - t.shift)/t.scale)
 end
 
 # NOTE: inverse_and_logjac interface experimental and sporadically implemented for now
 function inverse_and_logjac(t::ScaledShiftedLogistic, y)
+    @argcheck y > t.shift           DomainError
+    @argcheck y < t.scale + t.shift DomainError
     z = (y - t.shift) / t.scale
     logit(z), logit_logjac(z) - log(t.scale)
 end
 
-
-# to_interval interface
+####
+#### to_interval interface
+####
 
 struct Infinity{ispositive}
     Infinity{T}() where T = (@argcheck T isa Bool; new{T}())

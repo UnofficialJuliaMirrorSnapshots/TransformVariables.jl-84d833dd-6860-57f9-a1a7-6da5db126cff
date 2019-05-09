@@ -4,7 +4,7 @@ import Flux, ForwardDiff, ReverseDiff
 using LogDensityProblems: Value, ValueGradient
 using TransformVariables:
     AbstractTransform, ScalarTransform, VectorTransform, ArrayTransform,
-    unit_triangular_dimension, logistic, logistic_logjac, logit
+    unit_triangular_dimension, logistic, logistic_logjac, logit, inverse_and_logjac
 
 include("test_utilities.jl")
 
@@ -49,27 +49,60 @@ end
     @test_throws ArgumentError as(Real, "a fish", 9)
     @test as(Real, 1, 4.0) == as(Real, 1.0, 4.0)
     @test_throws ArgumentError as(Real, 3.0, -4.0)
+
+    t = as(Real, 1.0, ∞)
+    @test_throws DomainError inverse(t, 0.5)
+
+    t = as(Real, -∞, 10.0)
+    @test_throws DomainError inverse(t, 11.0)
+
+    t = as(Real, 1.0, 10.0)
+    @test_throws DomainError inverse(t, 0.5)
+    @test_throws DomainError inverse(t, 11.0)
+    @test_throws DomainError inverse_and_logjac(t, 0.5)
+    @test_throws DomainError inverse_and_logjac(t, 11.0)
 end
 
 @testset "to unit vector" begin
-    for K in 1:10
-        t = UnitVector(K)
-        @test dimension(t) == K - 1
-        if K > 1
-            test_transformation(t, y -> sum(abs2, y) ≈ 1,
-                                vec_y = y -> y[1:(end-1)])
+    @testset "dimension checks" begin
+        U = UnitVector(3)
+        x = zeros(3)               # incorrect
+        @test_throws ArgumentError U(x)
+        @test_throws ArgumentError transform(U, x)
+        @test_throws ArgumentError transform_and_logjac(U, x)
+    end
+
+    @testset "consistency checks" begin
+        for K in 1:10
+            t = UnitVector(K)
+            @test dimension(t) == K - 1
+            if K > 1
+                test_transformation(t, y -> sum(abs2, y) ≈ 1,
+                                    vec_y = y -> y[1:(end-1)])
+            end
         end
     end
 end
 
 @testset "to correlation cholesky factor" begin
-    for K in 1:8
-        t = CorrCholeskyFactor(K)
-        @test dimension(t) == (K - 1)*K/2
-        CIENV && @info "testing correlation cholesky K = $(K)"
-        if K > 1
-            test_transformation(t, is_valid_corr_cholesky;
-                                vec_y = vec_above_diagonal, N = 100)
+    @testset "dimension checks" begin
+        C = CorrCholeskyFactor(3)
+        wrong_x = zeros(dimension(C) + 1)
+
+        @test_throws ArgumentError C(wrong_x)
+        @test_throws ArgumentError transform(C, wrong_x)
+        @test_throws ArgumentError transform_and_logjac(C, wrong_x)
+    end
+
+    @testset "consistency checks" begin
+        for K in 1:8
+            t = CorrCholeskyFactor(K)
+            @test dimension(t) == (K - 1)*K/2
+            CIENV && @info "testing correlation cholesky K = $(K)"
+            if K > 1
+                test_transformation(t, is_valid_corr_cholesky;
+                                    vec_y = vec_above_diagonal, N = 100)
+            end
         end
     end
 end

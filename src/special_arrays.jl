@@ -1,5 +1,9 @@
 export UnitVector, CorrCholeskyFactor
 
+####
+#### building blocks
+####
+
 """
     (y, r, ℓ) = $SIGNATURES
 
@@ -24,7 +28,10 @@ Inverse of [`l2_remainder_transform`](@ref) in `x` and `y`.
 """
 @inline l2_remainder_inverse(y, r) = logit((y/√r+1)/2), r-abs2(y)
 
-
+####
+#### UnitVector
+####
+
 """
     UnitVector(n)
 
@@ -43,6 +50,7 @@ dimension(t::UnitVector) = t.n - 1
 
 function transform_with(flag::LogJacFlag, t::UnitVector, x::RealVector)
     @unpack n = t
+    @argcheck n - 1 == length(x)
     T = extended_eltype(x)
     r = one(T)
     y = Vector{T}(undef, n)
@@ -73,16 +81,30 @@ function inverse!(x::RealVector, t::UnitVector, y::RealVector)
     x
 end
 
-
-# correlation cholesky factor
+####
+#### correlation cholesky factor
+####
 
 """
     CorrCholeskyFactor(n)
 
 Cholesky factor of a correlation matrix of size `n`.
 
-Transforms ``n×(n-1)/2`` real numbers to an ``n×n`` upper-triangular matrix `Ω`, such that
-`Ω'*Ω` is a correlation matrix (positive definite, with unit diagonal).
+Transforms ``n×(n-1)/2`` real numbers to an ``n×n`` upper-triangular matrix `U`, such that
+`U'*U` is a correlation matrix (positive definite, with unit diagonal).
+
+# Notes
+
+If
+
+- `z` is a vector of `n` IID standard normal variates,
+
+- `σ` is an `n`-element vector of standard deviations,
+
+- `U` is obtained from `CorrCholeskyFactor(n)`,
+
+then `Diagonal(σ) * U' * z` will be a multivariate normal with the given variances and
+correlation matrix `U' * U`.
 """
 @calltrans struct CorrCholeskyFactor <: VectorTransform
     n::Int
@@ -96,6 +118,7 @@ dimension(t::CorrCholeskyFactor) = unit_triangular_dimension(t.n)
 
 function transform_with(flag::LogJacFlag, t::CorrCholeskyFactor, x::RealVector)
     @unpack n = t
+    @argcheck length(x) == dimension(t)
     T = extended_eltype(x)
     ℓ = logjac_zero(flag, T)
     U = Matrix{T}(undef, n, n)
