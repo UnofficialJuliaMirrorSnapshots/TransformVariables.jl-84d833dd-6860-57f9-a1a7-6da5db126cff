@@ -1,5 +1,13 @@
 # Unreleased
 
+# 0.3.5
+
+- use new LogDensityProblems interface
+
+- rewrite internals to work better with AD (especially Zygote)
+
+- fix broadcasting (`Ref(transformation)` no longer necessary)
+
 # 0.3.4
 
 - make `inverse(::ArrayTransform)` accept `AbstractArray`
