@@ -103,6 +103,29 @@ end
     end
 end
 
+@testset "to unit simplex" begin
+    @testset "dimension checks" begin
+        S = UnitSimplex(3)
+        x = zeros(3)               # incorrect
+        @test_throws ArgumentError S(x)
+        @test_throws ArgumentError transform(S, x)
+        @test_throws ArgumentError transform_and_logjac(S, x)
+    end
+
+    @testset "consistency checks" begin
+        for K in 1:10
+            t = UnitSimplex(K)
+            @test dimension(t) == K - 1
+            if K > 1
+                test_transformation(t, y -> (sum(y) ≈ 1) & (all(y.>=0)),
+                                    vec_y = y -> y[1:(end-1)])
+            end
+            x = zeros(dimension(t))
+            @test transform(t, x) ≈ 1 ./ fill(K, K)
+        end
+    end
+end
+
 @testset "to correlation cholesky factor" begin
     @testset "dimension checks" begin
         C = CorrCholeskyFactor(3)
@@ -250,6 +273,19 @@ end
     @test @inferred(transform(za, Float64[])) == Float64[]
     @test @inferred(transform_and_logjac(za, Float64[])) == (Float64[], 0.0)
     @test_skip inverse(za, []) == []
+end
+
+@testset "nested combinations" begin
+    # for https://github.com/tpapp/TransformVariables.jl/issues/57
+    for _ in 1:10
+        N = rand(3:7)
+        tt = as((a = as(Tuple(as(Vector, asℝ₊, 2) for _ in 1:N)),
+                 b = as(Tuple(UnitVector(n) for n in 1:N))))
+        x = randn(dimension(tt))
+        y = tt(x)
+        x′ = inverse(tt, y)
+        @test x ≈ x′
+    end
 end
 
 ####
@@ -461,4 +497,18 @@ end
     d = dimension(t)
     x = [zeros(d), zeros(d)]
     @test t.(x) == map(t, x)
+end
+
+####
+#### show
+####
+
+@testset "scalar show" begin
+    @test string(asℝ) == "asℝ"
+    @test string(asℝ₊) == "asℝ₊"
+    @test string(asℝ₋) == "asℝ₋"
+    @test string(as𝕀) == "as𝕀"
+    @test string(as(Real, 0.0, 2.0)) == "as(Real, 0.0, 2.0)"
+    @test string(as(Real, 1.0, ∞)) == "as(Real, 1.0, ∞)"
+    @test string(as(Real, -∞, 1.0)) == "as(Real, -∞, 1.0)"
 end

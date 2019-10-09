@@ -1,5 +1,17 @@
 # Unreleased
 
+# 0.3.8
+
+- add UnitSimplex ([#56], thanks @scheidan)
+
+# 0.3.7
+
+- fix some tuple index bugs (cf [#58])
+
+# 0.3.6
+
+- Pretty print scalar transforms ([#54], thanks @tkf)
+
 # 0.3.5
 
 - use new LogDensityProblems interface
